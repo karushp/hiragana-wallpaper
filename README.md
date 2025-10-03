@@ -69,3 +69,7 @@ Edit `src/hiragana_wallpaper/generator.py` to modify:
 - Font sizes
 - Layout positioning
 - Chart appearance
+
+## Example Output
+
+![Example Hiragana Wallpaper](tests/test_output/test_wallpaper.png)
