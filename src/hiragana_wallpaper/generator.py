@@ -148,23 +148,19 @@ def generate_wallpaper(character_data):
     # Get character data
     char = character_data["char"]
     pronunciation = character_data["pronunciation"]
-    meaning = character_data["meaning"]
     
     # Calculate positions for main character (centered in left area)
     char_bbox = draw.textbbox((0, 0), char, font=japanese_font)
     pronunciation_bbox = draw.textbbox((0, 0), pronunciation, font=english_font)
-    meaning_bbox = draw.textbbox((0, 0), meaning, font=english_font)
     
     char_width = char_bbox[2] - char_bbox[0]
     pronunciation_width = pronunciation_bbox[2] - pronunciation_bbox[0]
-    meaning_width = meaning_bbox[2] - meaning_bbox[0]
     
     char_height = char_bbox[3] - char_bbox[1]
     pronunciation_height = pronunciation_bbox[3] - pronunciation_bbox[1]
-    meaning_height = meaning_bbox[3] - meaning_bbox[1]
     
-    # Center main content vertically in left area - increased spacing for larger character
-    total_height = char_height + pronunciation_height + meaning_height + 180  # even more spacing
+    # Center main content vertically in left area - just character and pronunciation
+    total_height = char_height + pronunciation_height + 100  # generous spacing
     start_y = (height - total_height) // 2
     
     # Draw the main Hiragana character (large, white) in left area
@@ -172,15 +168,11 @@ def generate_wallpaper(character_data):
     char_y = start_y
     draw.text((char_x, char_y), char, font=japanese_font, fill=COLORS["text_primary"])
     
-    # Draw pronunciation (with more space after character)
+    # Draw pronunciation (with increased spacing after character)
     pron_x = (main_width - pronunciation_width) // 2
-    pron_y = char_y + char_height + 50  # increased spacing for larger character
+    pron_y = char_y + char_height + 80  # increased spacing from 50 to 80
     draw.text((pron_x, pron_y), pronunciation, font=english_font, fill=COLORS["text_primary"])
     
-    # Draw meaning (with more space after pronunciation)
-    meaning_x = (main_width - meaning_width) // 2
-    meaning_y = pron_y + pronunciation_height + 35  # increased spacing
-    draw.text((meaning_x, meaning_y), meaning, font=english_font, fill=COLORS["text_secondary"])
     
     # Draw reference chart (right side) - moved down and larger
     chart_start_x = main_width + 20
