@@ -14,17 +14,26 @@ def create_output_directory(output_dir="hiragana_wallpapers"):
     else:
         print(f"Directory {output_dir} already exists")
 
-def get_system_fonts():
+def to_katakana(char):
+    """Map a hiragana character to katakana. Empty cells stay empty."""
+    if not char:
+        return ""
+    code = ord(char)
+    if 0x3041 <= code <= 0x3096:
+        return chr(code + 0x60)
+    return char
+
+def get_system_fonts(japanese_size=230, english_size=60):
     """Get system fonts for Japanese and English text."""
     try:
-        # Try to load Japanese font first (common on macOS) - even larger main character size
-        japanese_font = ImageFont.truetype("/System/Library/Fonts/Hiragino Sans GB.ttc", 260)
-        english_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 60)
+        # Try to load Japanese font first (common on macOS)
+        japanese_font = ImageFont.truetype("/System/Library/Fonts/Hiragino Sans GB.ttc", japanese_size)
+        english_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", english_size)
     except OSError:
         try:
             # Fallback fonts
-            japanese_font = ImageFont.truetype("/System/Library/Fonts/Arial Unicode MS.ttf", 260)
-            english_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 60)
+            japanese_font = ImageFont.truetype("/System/Library/Fonts/Arial Unicode MS.ttf", japanese_size)
+            english_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", english_size)
         except OSError:
             # Default fonts if system fonts not found
             japanese_font = ImageFont.load_default()
@@ -33,17 +42,21 @@ def get_system_fonts():
     
     return japanese_font, english_font
 
-def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en):
-    """Draw a simplified reference chart on the right side."""
-    # Chart dimensions
+CHART_ROW_HEIGHT = 42
+
+def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en, katakana=False):
+    """Draw a gojūon chart. Returns the y coordinate just below the chart."""
+    transform = to_katakana if katakana else (lambda c: c)
     cell_width = chart_width // 5  # 5 columns
-    row_height = 55  # increased for larger fonts
-    
-    # Header row (vowels A, I, U, E, O) - with tighter spacing
+    row_height = CHART_ROW_HEIGHT
+    col_step = cell_width * 0.65
+
+    y = start_y
+
+    # Header row (vowels A, I, U, E, O)
     vowels = ["A", "I", "U", "E", "O"]
     for i, vowel in enumerate(vowels):
-        x = start_x + i * (cell_width * 0.65) + cell_width // 2  # match the tighter column spacing
-        y = start_y
+        x = start_x + i * col_step + cell_width // 2
         bbox = draw.textbbox((0, 0), vowel, font=font_en)
         text_width = bbox[2] - bbox[0]
         draw.text((x - text_width // 2, y), vowel, font=font_en, fill=COLORS["text_primary"])
@@ -53,7 +66,7 @@ def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en):
     vowel_characters = ["あ", "い", "う", "え", "お"]
     
     # Draw vowel row header
-    vowel_row_y = start_y + row_height
+    vowel_row_y = y + row_height
     bbox = draw.textbbox((0, 0), vowel_row_label, font=font_en)
     text_width = bbox[2] - bbox[0]
     header_x = start_x - text_width - 10
@@ -61,15 +74,16 @@ def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en):
     
     # Draw vowel characters
     for col_idx, char in enumerate(vowel_characters):
-        cell_x = start_x + col_idx * (cell_width * 0.65)
-        cell_y = vowel_row_y + 5
+        shown = transform(char)
+        cell_x = start_x + col_idx * col_step
+        cell_y = vowel_row_y + 4
         
         # Center character in cell
-        char_bbox = draw.textbbox((0, 0), char, font=font_jp)
+        char_bbox = draw.textbbox((0, 0), shown, font=font_jp)
         char_width = char_bbox[2] - char_bbox[0]
         char_x = cell_x + (cell_width - char_width) // 2
         
-        draw.text((char_x, cell_y), char, font=font_jp, fill=COLORS["text_primary"])
+        draw.text((char_x, cell_y), shown, font=font_jp, fill=COLORS["text_primary"])
     
     # Simplified chart data - organized by vowel columns (A,I,U,E,O)
     chart_rows = [
@@ -102,7 +116,7 @@ def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en):
     
     # Draw rows (adjusted for vowel row)
     for row_idx, (row_label, characters) in enumerate(chart_rows):
-        row_y = start_y + row_height * 2 + row_idx * row_height  # Skip vowel row
+        row_y = y + row_height * 2 + row_idx * row_height  # Skip vowel row
         
         # Draw row header
         header_x = start_x - 60
@@ -111,19 +125,21 @@ def draw_reference_chart(draw, start_x, start_y, chart_width, font_jp, font_en):
         # Draw characters with tighter column spacing
         for col_idx, char in enumerate(characters):
             if char:  # Only draw if character exists
-                # Reduce the cell spacing for tighter layout
-                cell_x = start_x + col_idx * (cell_width * 0.65)  # reduce spacing between columns even more
-                cell_y = row_y + 5  # Small vertical offset
+                shown = transform(char)
+                cell_x = start_x + col_idx * col_step
+                cell_y = row_y + 4
                 
                 # Center character in cell
-                char_bbox = draw.textbbox((0, 0), char, font=font_jp)
-                char_width = char_bbox[2] + char_bbox[0]
+                char_bbox = draw.textbbox((0, 0), shown, font=font_jp)
+                char_width = char_bbox[2] - char_bbox[0]
                 char_x = cell_x + (cell_width - char_width) // 2
                 
-                draw.text((char_x, cell_y), char, font=font_jp, fill=COLORS["text_primary"])
+                draw.text((char_x, cell_y), shown, font=font_jp, fill=COLORS["text_primary"])
+
+    return y + row_height * (2 + len(chart_rows))
 
 def generate_wallpaper(character_data):
-    """Generate a single wallpaper image with main character and reference chart."""
+    """Generate a wallpaper with the sound in both scripts and both charts."""
     # Standard Mac wallpaper dimensions (16:10 ratio)
     width, height = 2880, 1800
     
@@ -134,9 +150,9 @@ def generate_wallpaper(character_data):
     # Get fonts
     japanese_font, english_font = get_system_fonts()
     
-    # Try to get chart fonts, fallback to system fonts if needed: larger chart fonts
+    # Chart fonts are smaller so hiragana and katakana grids both fit
     try:
-        chart_font_jp = ImageFont.truetype("/System/Library/Fonts/Hiragino Sans GB.ttc", 36)
+        chart_font_jp = ImageFont.truetype("/System/Library/Fonts/Hiragino Sans GB.ttc", 28)
         chart_font_en = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
     except OSError:
         chart_font_jp = japanese_font
@@ -147,38 +163,49 @@ def generate_wallpaper(character_data):
     
     # Get character data
     char = character_data["char"]
+    kata = to_katakana(char)
     pronunciation = character_data["pronunciation"]
     
-    # Calculate positions for main character (centered in left area)
-    char_bbox = draw.textbbox((0, 0), char, font=japanese_font)
+    # Pair hiragana and katakana, centered together in the left area
+    hira_bbox = draw.textbbox((0, 0), char, font=japanese_font)
+    kata_bbox = draw.textbbox((0, 0), kata, font=japanese_font)
     pronunciation_bbox = draw.textbbox((0, 0), pronunciation, font=english_font)
     
-    char_width = char_bbox[2] - char_bbox[0]
+    hira_width = hira_bbox[2] - hira_bbox[0]
+    kata_width = kata_bbox[2] - kata_bbox[0]
     pronunciation_width = pronunciation_bbox[2] - pronunciation_bbox[0]
     
-    char_height = char_bbox[3] - char_bbox[1]
+    glyph_height = max(hira_bbox[3] - hira_bbox[1], kata_bbox[3] - kata_bbox[1])
     pronunciation_height = pronunciation_bbox[3] - pronunciation_bbox[1]
+    glyph_gap = 80
     
-    # Center main content vertically in left area - just character and pronunciation
-    total_height = char_height + pronunciation_height + 100  # generous spacing
+    pair_width = hira_width + glyph_gap + kata_width
+    total_height = glyph_height + pronunciation_height + 100
     start_y = (height - total_height) // 2
+    pair_x = (main_width - pair_width) // 2
     
-    # Draw the main Hiragana character (large, white) in left area
-    char_x = (main_width - char_width) // 2
-    char_y = start_y
-    draw.text((char_x, char_y), char, font=japanese_font, fill=COLORS["text_primary"])
+    draw.text((pair_x - hira_bbox[0], start_y), char, font=japanese_font, fill=COLORS["text_primary"])
+    draw.text((pair_x + hira_width + glyph_gap - kata_bbox[0], start_y), kata, font=japanese_font, fill=COLORS["text_primary"])
     
-    # Draw pronunciation (with increased spacing after character)
-    pron_x = (main_width - pronunciation_width) // 2
-    pron_y = char_y + char_height + 80  # increased spacing from 50 to 80
+    # One romaji line, centered under the pair
+    pron_x = pair_x + (pair_width - pronunciation_width) // 2
+    pron_y = start_y + glyph_height + 80
     draw.text((pron_x, pron_y), pronunciation, font=english_font, fill=COLORS["text_primary"])
     
+    # Hiragana chart on top, katakana chart beneath it, with two extra rows between them
+    chart_start_x = main_width + 80
+    chart_width = width - chart_start_x - 40
+    chart_rows = 18  # vowel header, vowel row, then K through ん
+    chart_gap = 28 + CHART_ROW_HEIGHT * 2
+    charts_height = chart_rows * CHART_ROW_HEIGHT * 2 + chart_gap
+    chart_start_y = (height - charts_height) // 2
     
-    # Draw reference chart (right side) - moved down and larger
-    chart_start_x = main_width + 20
-    chart_start_y = 150  # moved down significantly
-    chart_width = width - chart_start_x - 20
-    
-    draw_reference_chart(draw, chart_start_x, chart_start_y, chart_width, chart_font_jp, chart_font_en)
+    hiragana_bottom = draw_reference_chart(
+        draw, chart_start_x, chart_start_y, chart_width, chart_font_jp, chart_font_en,
+    )
+    draw_reference_chart(
+        draw, chart_start_x, hiragana_bottom + chart_gap, chart_width, chart_font_jp, chart_font_en,
+        katakana=True,
+    )
     
     return img

@@ -4,14 +4,15 @@ Command-line interface for the Hiragana Wallpaper Generator.
 
 import os
 from . import HIRAGANA_DATA, generate_wallpaper, create_output_directory
+from .generator import to_katakana
 
-# Configuration
-IMAGES_DIR = "hiragana_wallpapers"
+# Combined hiragana + katakana set. The hiragana-only wallpapers stay in hiragana_wallpapers/.
+IMAGES_DIR = "hiragana_katakana_wallpapers"
 IMAGES_PER_MINUTE = 3  # How often to change wallpapers (roughly)
 
 def main():
-    """Main function to generate all Hiragana wallpapers."""
-    print("🎌 Generating Hiragana wallpapers...")
+    """Generate wallpapers that show each sound in hiragana and katakana."""
+    print("🎌 Generating hiragana and katakana wallpapers...")
     print(f"📁 Output directory: {IMAGES_DIR}")
     print(f"🎨 Theme: Dark minimalist (3 colors)")
     print(f"📐 Resolution: 2880x1800 (Mac retina)")
@@ -29,7 +30,7 @@ def main():
         char = character_data["char"]
         pronunciation = character_data["pronunciation"]
         
-        print(f"Generating {char} ({pronunciation})...")
+        print(f"Generating {char} / {to_katakana(char)} ({pronunciation})...")
         
         # Generate the image
         wallpaper = generate_wallpaper(character_data)

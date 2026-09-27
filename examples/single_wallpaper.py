@@ -13,6 +13,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from hiragana_wallpaper import generate_wallpaper, create_output_directory, HIRAGANA_DATA
+from hiragana_wallpaper.generator import to_katakana
 
 def test_single_character():
     """Generate just one wallpaper for testing."""
@@ -27,7 +28,7 @@ def test_single_character():
     pronunciation = test_char["pronunciation"]
     meaning = test_char["meaning"]
     
-    print(f"Generating wallpaper for: {char} ({pronunciation}) - {meaning}")
+    print(f"Generating wallpaper for: {char} / {to_katakana(char)} ({pronunciation}) - {meaning}")
     
     # Generate the wallpaper
     wallpaper = generate_wallpaper(test_char)
